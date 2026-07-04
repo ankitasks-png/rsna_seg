@@ -1,0 +1,7 @@
+venv/
+.venv/
+data/
+masks/
+overlays/
+checkpoints/
+__pycache__/
