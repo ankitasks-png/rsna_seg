@@ -6,25 +6,37 @@ from tqdm import tqdm
 import json
 import sys
 
-IMAGE_DIR   = Path("data/images")
-MASK_DIR    = Path("masks")
-OVERLAY_DIR = Path("overlays")
-SAM2_CKPT   = Path("checkpoints/sam2_large.pt")
+PROJECT_ROOT = Path(__file__).resolve().parent
+IMAGE_DIR   = PROJECT_ROOT / "data/images"
+MASK_DIR    = PROJECT_ROOT / "masks"
+OVERLAY_DIR = PROJECT_ROOT / "overlays"
+CHECKPOINT_DIR = PROJECT_ROOT / "checkpoints"
+SAM2_DIR    = PROJECT_ROOT / "sam2"
+SAM2_CKPT   = CHECKPOINT_DIR / "sam2.1_hiera_large.pt"
 DEVICE      = "cuda" if torch.cuda.is_available() else "cpu"
 
-MASK_DIR.mkdir(exist_ok=True)
-OVERLAY_DIR.mkdir(exist_ok=True)
+IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+MASK_DIR.mkdir(parents=True, exist_ok=True)
+OVERLAY_DIR.mkdir(parents=True, exist_ok=True)
+CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
 
 print(f"Device: {DEVICE}")
 print(f"Loading SAM 2...")
 
-sys.path.insert(0, str(Path("C:/Users/ankit/Downloads/Bone+Age+Training+Set+Annotations/sam2")))
+sys.path.insert(0, str(SAM2_DIR))
+
+if not SAM2_DIR.exists():
+    raise SystemExit(
+        f"Missing SAM 2 source folder: {SAM2_DIR}. Place the sam2 package there before running."
+    )
 
 from sam2.build_sam import build_sam2
 from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
 
+config_file = SAM2_DIR / "sam2" / "configs" / "sam2.1" / "sam2.1_hiera_l.yaml"
+
 sam2 = build_sam2(
-    "configs/sam2.1/sam2.1_hiera_large.yaml",
+    str(config_file),
     str(SAM2_CKPT),
     device=DEVICE
 )
@@ -37,7 +49,11 @@ generator = SAM2AutomaticMaskGenerator(
 )
 print("SAM 2 loaded.\n")
 
-all_images = sorted(IMAGE_DIR.glob("*.png"))[:200]
+all_images = (
+    sorted(IMAGE_DIR.glob("*.png")) +
+    sorted(IMAGE_DIR.glob("*.jpg")) +
+    sorted(IMAGE_DIR.glob("*.jpeg"))
+)[:200]
 print(f"Processing {len(all_images)} images...\n")
 
 for img_path in tqdm(all_images):
